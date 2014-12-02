@@ -1,3 +1,21 @@
+/*
+ * bobble - Dashcam based on OpenCV
+ * Copyright 2014 Robert Joslyn
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <cstdio>
 #include <ctime>
 #include <iomanip>
@@ -8,7 +26,7 @@ using namespace std;
 using namespace cv;
 
 bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
-    int success = true;
+    bool success = true;
 
     // Time variables.
     time_t startTime;
@@ -29,8 +47,8 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
     int textYPosition = 12; // Y position value for placing text.
     int rectYHeight = 17; // Y height of the rectangle behind the tex.
 
-    int frameHeight = videoCapture.get(CV_CAP_PROP_FRAME_HEIGHT);
-    int frameWidth = videoCapture.get(CV_CAP_PROP_FRAME_WIDTH);
+    int frameHeight = (int)videoCapture.get(CV_CAP_PROP_FRAME_HEIGHT);
+    int frameWidth = (int)videoCapture.get(CV_CAP_PROP_FRAME_WIDTH);
     //double fps = videoCapture.get(CV_CAP_PROP_FPS);
     double fps = 15;
     static int captureNum = 0;
@@ -55,7 +73,7 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
         videoCapture >> frame; // Get a new frame from the camera.
         time(&currentTime); // Capture the time of the frame.
 
-        // Draw a rectage as backgroud for time.
+        // Draw a rectangle as background for time.
         rectangle(frame, // image
                   cvPoint(0, 0), // vertex
                   cvPoint(frameWidth, rectYHeight),
@@ -121,6 +139,8 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
         }
     }
     captureNum++;
+
+    return success;
 }
 
 int main(int argc, char** argv) {
@@ -130,7 +150,7 @@ int main(int argc, char** argv) {
         printf("Failed to open video capture device.\n");
         return -1;
     }
-    // Set the camera framerate (broken on SPC900NC camera).
+    // Set the camera frame rate (broken on SPC900NC camera).
     //cap.set(CV_CAP_PROP_FPS, 30);
 
     namedWindow("Video Preview", 1);

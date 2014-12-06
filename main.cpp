@@ -19,14 +19,87 @@
 #include <cstdio>
 #include <ctime>
 #include <iomanip>
+#include <mutex>
 #include <opencv2/opencv.hpp>
-#include <sstream>
+#include <thread>
+#include "libgpsmm.h"
 
 using namespace std;
 using namespace cv;
 
+struct g_gps_data_t {
+    double speed;
+    double latitude;
+    double longitude;
+} g_gps_data;
+
+mutex g_gps_data_mutex;
+
+/*
+int main(void)
+{
+    gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
+
+    if (gps_rec.stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
+        cerr << "No GPSD running.\n";
+        return 1;
+    }
+
+    for (;;) {
+        struct gps_data_t* newdata;
+
+        if (!gps_rec.waiting(50000000))
+            continue;
+
+        if ((newdata = gps_rec.read()) == NULL) {
+            cerr << "Read error.\n";
+            return 1;
+        } else {
+            PROCESS(newdata);
+        }
+    }
+    return 0;
+}*/
+void gps_thread() {
+    gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
+    if (gps_rec.stream(WATCH_ENABLE | WATCH_JSON) == NULL) {
+        printf("No gpsd running.\n");
+        return;
+    }
+    while (true) {
+        struct gps_data_t *newdata;
+
+        if (!gps_rec.waiting(50000000)) {
+            continue;
+        }
+
+        if ((newdata = gps_rec.read()) == NULL) {
+            printf("Read error.\n");
+            return;
+        } else {
+            if (newdata->set & SPEED_SET) {
+                g_gps_data_mutex.lock();
+                g_gps_data.speed = newdata->fix.speed;
+                g_gps_data_mutex.unlock();
+            }
+            if (newdata->set & LATLON_SET) {
+                g_gps_data_mutex.lock();
+                g_gps_data.latitude = newdata->fix.latitude;
+                g_gps_data.longitude = newdata->fix.longitude;
+                g_gps_data_mutex.unlock();
+
+            }
+        }
+    }
+}
+
 bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
     bool success = true;
+
+    // GPS variables
+    double latitude = NAN;
+    double longitude = NAN;
+    double speed = NAN;
 
     // Time variables.
     time_t startTime;
@@ -91,11 +164,17 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
                 thickness,
                 CV_AA);
 
+        // Pull GPS data out of structure.
+        g_gps_data_mutex.lock();
+        latitude = g_gps_data.latitude;
+        longitude = g_gps_data.longitude;
+        speed = g_gps_data.speed;
+        g_gps_data_mutex.unlock();
+
         // Draw speed to the frame.
-        float speed = 88;
         ostringstream textSS;
         int baseline = 0;
-        textSS << (int)speed << " mph";
+        textSS << speed << " mph";
         Size speedTextSize = getTextSize(textSS.str(), font, fontScale,
                                          thickness, &baseline);
         int speedPosition = (frameWidth / 2) - (speedTextSize.width / 2);
@@ -109,8 +188,6 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
                 CV_AA);
 
         // Draw GPS coordinates to the frame.
-        double latitude  =   28.524058;
-        double longitude = -80.65085;
         ostringstream gpsSS;
         //int baseline = 0;
         gpsSS << setprecision(8) << "Lat: " << latitude << " Lon: " << longitude;
@@ -144,14 +221,21 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
 }
 
 int main(int argc, char** argv) {
+    // Initialize GPS data struct.
+    g_gps_data.latitude = 28.524058;
+    g_gps_data.longitude = -80.65085;
+    g_gps_data.speed = 88;
     // Video Capture
     VideoCapture cap(0); // Open the default camera.
     if (!cap.isOpened()) {
         printf("Failed to open video capture device.\n");
         return -1;
     }
-    // Set the camera frame rate (broken on SPC900NC camera).
+    // Set the camera frame rate.
+    // Broken on SPC900NC camera :-(
     //cap.set(CV_CAP_PROP_FPS, 30);
+
+    thread gps(gps_thread);
 
     namedWindow("Video Preview", 1);
     //while (true) {

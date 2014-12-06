@@ -28,38 +28,13 @@ using namespace std;
 using namespace cv;
 
 struct g_gps_data_t {
-    double speed;
-    double latitude;
-    double longitude;
+    double speed = NAN;
+    double latitude = NAN;
+    double longitude = NAN;
 } g_gps_data;
 
 mutex g_gps_data_mutex;
 
-/*
-int main(void)
-{
-    gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
-
-    if (gps_rec.stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
-        cerr << "No GPSD running.\n";
-        return 1;
-    }
-
-    for (;;) {
-        struct gps_data_t* newdata;
-
-        if (!gps_rec.waiting(50000000))
-            continue;
-
-        if ((newdata = gps_rec.read()) == NULL) {
-            cerr << "Read error.\n";
-            return 1;
-        } else {
-            PROCESS(newdata);
-        }
-    }
-    return 0;
-}*/
 void gps_thread() {
     gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
     if (gps_rec.stream(WATCH_ENABLE | WATCH_JSON) == NULL) {
@@ -97,9 +72,9 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
     bool success = true;
 
     // GPS variables
-    double latitude = NAN;
-    double longitude = NAN;
-    double speed = NAN;
+    double latitude;
+    double longitude;
+    double speed;
 
     // Time variables.
     time_t startTime;
@@ -174,7 +149,9 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
         // Draw speed to the frame.
         ostringstream textSS;
         int baseline = 0;
-        textSS << speed << " mph";
+        // Convert m/s to mph
+        speed = speed * MPS_TO_MPH;
+        textSS << setprecision(1) << speed << " mph";
         Size speedTextSize = getTextSize(textSS.str(), font, fontScale,
                                          thickness, &baseline);
         int speedPosition = (frameWidth / 2) - (speedTextSize.width / 2);
@@ -221,10 +198,6 @@ bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
 }
 
 int main(int argc, char** argv) {
-    // Initialize GPS data struct.
-    g_gps_data.latitude = 28.524058;
-    g_gps_data.longitude = -80.65085;
-    g_gps_data.speed = 88;
     // Video Capture
     VideoCapture cap(0); // Open the default camera.
     if (!cap.isOpened()) {

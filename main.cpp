@@ -19,54 +19,11 @@
 #include <cstdio>
 #include <ctime>
 #include <iomanip>
-#include <mutex>
 #include <opencv2/opencv.hpp>
-#include <thread>
-#include "libgpsmm.h"
+#include "gpsd_client.hpp"
 
 using namespace std;
 using namespace cv;
-
-struct g_gps_data_t {
-    double speed = NAN;
-    double latitude = NAN;
-    double longitude = NAN;
-} g_gps_data;
-
-mutex g_gps_data_mutex;
-
-void gps_thread() {
-    gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
-    if (gps_rec.stream(WATCH_ENABLE | WATCH_JSON) == NULL) {
-        printf("No gpsd running.\n");
-        return;
-    }
-    while (true) {
-        struct gps_data_t *newdata;
-
-        if (!gps_rec.waiting(50000000)) {
-            continue;
-        }
-
-        if ((newdata = gps_rec.read()) == NULL) {
-            printf("Read error.\n");
-            return;
-        } else {
-            if (newdata->set & SPEED_SET) {
-                g_gps_data_mutex.lock();
-                g_gps_data.speed = newdata->fix.speed;
-                g_gps_data_mutex.unlock();
-            }
-            if (newdata->set & LATLON_SET) {
-                g_gps_data_mutex.lock();
-                g_gps_data.latitude = newdata->fix.latitude;
-                g_gps_data.longitude = newdata->fix.longitude;
-                g_gps_data_mutex.unlock();
-
-            }
-        }
-    }
-}
 
 bool recordInterval(VideoCapture& videoCapture, unsigned int seconds) {
     bool success = true;

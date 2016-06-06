@@ -1,8 +1,5 @@
 # Compiled Object files
-*.slo
-*.lo
 *.o
-*.obj
 
 # Precompiled Headers
 *.gch
@@ -10,19 +7,26 @@
 
 # Compiled Dynamic libraries
 *.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
 
 # Compiled Static libraries
-*.lai
 *.la
 *.a
-*.lib
 
-# Executables
-*.exe
-*.out
-*.app
+# Autotools
+autom4te.cache
+compile
+config.h
+config.h.in
+config.log
+config.status
+configure
+depcomp
+install-sh
+Makefile
+Makefile.in
+missing
+src/.deps/
+stamp-h1
+
+# Binary
+src/bobble

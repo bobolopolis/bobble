@@ -1,0 +1,11 @@
+bobble
+======
+
+A simple application for learning OpenCV.
+
+Ubuntu Build Dependencies:
+	- autoconf
+	- autoconf-archive
+	- gpsd
+	- libgps-dev
+	- libopencv-dev
